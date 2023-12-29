@@ -10,6 +10,14 @@ def get_argparser():
         help='If set, returns the output of the "timeit" built-in ipython magic instead of stdout.',
     )
     parser.add_argument(
+        '-l',
+        '--profile-tool',
+        type=str,
+        default='ncu',
+        choices=['ncu', 'nsys'],
+        help='The profiling tool to use. Can be "ncu" for Nsight Compute or "nsys" for Nsight Systems. Only works with --profile.',
+    )
+    parser.add_argument(
         '-p', 
         '--profile', 
         action='store_true',
