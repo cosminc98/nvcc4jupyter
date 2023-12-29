@@ -2,12 +2,13 @@ import os
 import subprocess
 import tempfile
 import uuid
+from typing import List, Optional
 
 from IPython.core.magic import Magics, cell_magic, magics_class
 from common import helper
 
 compiler = '/usr/local/cuda/bin/nvcc'
-profiler = '/usr/local/cuda/bin/ncu'
+profiler = '/usr/local/cuda/bin/{}'
 ext = '.cu'
 
 
@@ -24,7 +25,17 @@ class NVCCPlugin(Magics):
         subprocess.check_output(
             [compiler, file_path + ext, "-o", file_path + ".out", '-Wno-deprecated-gpu-targets'], stderr=subprocess.STDOUT)
 
-    def run(self, file_path, timeit=False, profile=False, profiler_args=[]):
+    def run(
+        self, 
+        file_path: str, 
+        timeit: bool = False,
+        profile_tool: str = "ncu",
+        profile: bool = False, 
+        profiler_args: Optional[List[str]] = None,
+    ):
+        if profiler_args is None:
+            profiler_args = []
+            
         if timeit:
             stmt = f"subprocess.check_output(['{file_path}.out'], stderr=subprocess.STDOUT)"
             output = self.shell.run_cell_magic(
@@ -33,7 +44,7 @@ class NVCCPlugin(Magics):
         else:
             run_args = []
             if profile:
-                run_args.extend([profiler] + profiler_args)
+                run_args.extend([profiler.format(profile_tool)] + profiler_args)
             run_args.append(file_path + ".out")
             output = subprocess.check_output(run_args, stderr=subprocess.STDOUT)
             output = output.decode('utf8')
@@ -55,7 +66,13 @@ class NVCCPlugin(Magics):
                 f.write(cell)
             try:
                 self.compile(file_path)
-                output = self.run(file_path, timeit=args.timeit, profile=args.profile, profiler_args=args.profiler_args)
+                output = self.run(
+                    file_path=file_path, 
+                    timeit=args.timeit, 
+                    profile_tool=args.profile_tool,
+                    profile=args.profile, 
+                    profiler_args=args.profiler_args
+                )
             except subprocess.CalledProcessError as e:
                 helper.print_out(e.output.decode("utf8"))
                 output = None
